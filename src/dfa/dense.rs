@@ -1040,7 +1040,7 @@ impl Config {
     /// always used. If an option in `o` is not set, then the corresponding
     /// option in `self` is used. If it's not set in `self` either, then it
     /// remains not set.
-    pub(crate) fn overwrite(&self, o: Config) -> Config {
+    pub fn overwrite(&self, o: Config) -> Config {
         Config {
             accelerate: o.accelerate.or(self.accelerate),
             pre: o.pre.or_else(|| self.pre.clone()),
@@ -1329,7 +1329,7 @@ impl Default for Builder {
 /// reason for making DFAs generic is no_std support, and more generally,
 /// making it possible to load a DFA from an arbitrary slice of bytes.
 #[cfg(feature = "alloc")]
-pub(crate) type OwnedDFA = DFA<alloc::vec::Vec<u32>>;
+pub type OwnedDFA = DFA<alloc::vec::Vec<u32>>;
 
 /// A dense table-based deterministic finite automaton (DFA).
 ///
@@ -1591,8 +1591,12 @@ impl<T: AsRef<[u32]>> DFA<T> {
     }
 
 
-
-    pub fn get_transitions(&self) -> TransitionTable<T> {
+    /// documentation or sum
+    pub fn get_transitions(&self) -> TransitionTable<T> 
+    where 
+        T: Clone,
+    {
+        
         self.tt.clone()
     }
 
@@ -1628,7 +1632,7 @@ impl<T: AsRef<[u32]>> DFA<T> {
 
     /// Returns the start byte map used for computing the `Start` configuration
     /// at the beginning of a search.
-    pub(crate) fn start_map(&self) -> &StartByteMap {
+    pub fn start_map(&self) -> &StartByteMap {
         &self.st.start_map
     }
 
@@ -2485,7 +2489,7 @@ impl<'a> DFA<&'a [u32]> {
 #[cfg(feature = "dfa-build")]
 impl OwnedDFA {
     /// Add a start state of this DFA.
-    pub(crate) fn set_start_state(
+    pub fn set_start_state(
         &mut self,
         anchored: Anchored,
         start: Start,
@@ -2497,7 +2501,7 @@ impl OwnedDFA {
 
     /// Set the given transition to this DFA. Both the `from` and `to` states
     /// must already exist.
-    pub(crate) fn set_transition(
+    pub fn set_transition(
         &mut self,
         from: StateID,
         byte: alphabet::Unit,
@@ -2512,7 +2516,7 @@ impl OwnedDFA {
     ///
     /// If adding a state would exceed `StateID::LIMIT`, then this returns an
     /// error.
-    pub(crate) fn add_empty_state(&mut self) -> Result<StateID, BuildError> {
+    pub fn add_empty_state(&mut self) -> Result<StateID, BuildError> {
         self.tt.add_empty_state()
     }
 
@@ -2521,14 +2525,14 @@ impl OwnedDFA {
     /// This routine does not do anything to check the correctness of this
     /// swap. Callers must ensure that other states pointing to id1 and id2 are
     /// updated appropriately.
-    pub(crate) fn swap_states(&mut self, id1: StateID, id2: StateID) {
+    pub fn swap_states(&mut self, id1: StateID, id2: StateID) {
         self.tt.swap(id1, id2);
     }
 
     /// Remap all of the state identifiers in this DFA according to the map
     /// function given. This includes all transitions and all starting state
     /// identifiers.
-    pub(crate) fn remap(&mut self, map: impl Fn(StateID) -> StateID) {
+    pub fn remap(&mut self, map: impl Fn(StateID) -> StateID) {
         // We could loop over each state ID and call 'remap_state' here, but
         // this is more direct: just map every transition directly. This
         // technically might do a little extra work since the alphabet length
@@ -2546,7 +2550,7 @@ impl OwnedDFA {
     /// given. This applies the given map function to every transition in the
     /// given state and changes the transition in place to the result of the
     /// map function for that transition.
-    pub(crate) fn remap_state(
+    pub fn remap_state(
         &mut self,
         id: StateID,
         map: impl Fn(StateID) -> StateID,
@@ -2559,12 +2563,12 @@ impl OwnedDFA {
     /// This routine does not do anything to check the correctness of this
     /// truncation. Callers must ensure that other states pointing to truncated
     /// states are updated appropriately.
-    pub(crate) fn truncate_states(&mut self, len: usize) {
+    pub fn truncate_states(&mut self, len: usize) {
         self.tt.truncate(len);
     }
 
     /// Minimize this DFA in place using Hopcroft's algorithm.
-    pub(crate) fn minimize(&mut self) {
+    pub fn minimize(&mut self) {
         Minimizer::new(self).run();
     }
 
@@ -2575,7 +2579,7 @@ impl OwnedDFA {
     /// representation used by a DFA for this map is not amenable to mutation,
     /// so if things need to be changed (like when shuffling states), it's
     /// often easier to work with the map form.
-    pub(crate) fn set_pattern_map(
+    pub fn set_pattern_map(
         &mut self,
         map: &BTreeMap<StateID, Vec<PatternID>>,
     ) -> Result<(), BuildError> {
@@ -2585,7 +2589,7 @@ impl OwnedDFA {
 
     /// Find states that have a small number of non-loop transitions and mark
     /// them as candidates for acceleration during search.
-    pub(crate) fn accelerate(&mut self) {
+    pub fn accelerate(&mut self) {
         // dead and quit states can never be accelerated.
         if self.state_len() <= 2 {
             return;
@@ -2804,7 +2808,7 @@ impl OwnedDFA {
     /// states and accelerated states are all contiguous.
     ///
     /// See dfa/special.rs for more details.
-    pub(crate) fn shuffle(
+    pub fn shuffle(
         &mut self,
         mut matches: BTreeMap<StateID, Vec<PatternID>>,
     ) -> Result<(), BuildError> {
@@ -2949,23 +2953,23 @@ impl OwnedDFA {
 // A variety of generic internal methods for accessing DFA internals.
 impl<T: AsRef<[u32]>> DFA<T> {
     /// Return the info about special states.
-    pub(crate) fn special(&self) -> &Special {
+    pub fn special(&self) -> &Special {
         &self.special
     }
 
     /// Return the info about special states as a mutable borrow.
     #[cfg(feature = "dfa-build")]
-    pub(crate) fn special_mut(&mut self) -> &mut Special {
+    pub fn special_mut(&mut self) -> &mut Special {
         &mut self.special
     }
 
     /// Returns the quit set (may be empty) used by this DFA.
-    pub(crate) fn quitset(&self) -> &ByteSet {
+    pub fn quitset(&self) -> &ByteSet {
         &self.quitset
     }
 
     /// Returns the flags for this DFA.
-    pub(crate) fn flags(&self) -> &Flags {
+    pub fn flags(&self) -> &Flags {
         &self.flags
     }
 
@@ -2974,13 +2978,13 @@ impl<T: AsRef<[u32]>> DFA<T> {
     /// This iterator yields a tuple for each state. The first element of the
     /// tuple corresponds to a state's identifier, and the second element
     /// corresponds to the state itself (comprised of its transitions).
-    pub(crate) fn states(&self) -> StateIter<'_, T> {
+    pub fn states(&self) -> StateIter<'_, T> {
         self.tt.states()
     }
 
     /// Return the total number of states in this DFA. Every DFA has at least
     /// 1 state, even the empty DFA.
-    pub(crate) fn state_len(&self) -> usize {
+    pub fn state_len(&self) -> usize {
         self.tt.len()
     }
 
@@ -2988,7 +2992,7 @@ impl<T: AsRef<[u32]>> DFA<T> {
     ///
     /// If the given state is not a match state, then this panics.
     #[cfg(feature = "dfa-build")]
-    pub(crate) fn pattern_id_slice(&self, id: StateID) -> &[PatternID] {
+    pub fn pattern_id_slice(&self, id: StateID) -> &[PatternID] {
         assert!(self.is_match_state(id));
         self.ms.pattern_id_slice(self.match_state_index(id))
     }
@@ -2996,26 +3000,26 @@ impl<T: AsRef<[u32]>> DFA<T> {
     /// Return the total number of pattern IDs for the given match state.
     ///
     /// If the given state is not a match state, then this panics.
-    pub(crate) fn match_pattern_len(&self, id: StateID) -> usize {
+    pub fn match_pattern_len(&self, id: StateID) -> usize {
         assert!(self.is_match_state(id));
         self.ms.pattern_len(self.match_state_index(id))
     }
 
     /// Returns the total number of patterns matched by this DFA.
-    pub(crate) fn pattern_len(&self) -> usize {
+    pub fn pattern_len(&self) -> usize {
         self.ms.pattern_len
     }
 
     /// Returns a map from match state ID to a list of pattern IDs that match
     /// in that state.
     #[cfg(feature = "dfa-build")]
-    pub(crate) fn pattern_map(&self) -> BTreeMap<StateID, Vec<PatternID>> {
+    pub fn pattern_map(&self) -> BTreeMap<StateID, Vec<PatternID>> {
         self.ms.to_map(self)
     }
 
     /// Returns the ID of the quit state for this DFA.
     #[cfg(feature = "dfa-build")]
-    pub(crate) fn quit_id(&self) -> StateID {
+    pub fn quit_id(&self) -> StateID {
         self.to_state_id(1)
     }
 
@@ -3024,7 +3028,7 @@ impl<T: AsRef<[u32]>> DFA<T> {
     /// table. When a DFA is NOT premultiplied, then a state's identifier is
     /// also its index. When a DFA is premultiplied, then a state's identifier
     /// is equal to `index * alphabet_len`. This routine reverses that.
-    pub(crate) fn to_index(&self, id: StateID) -> usize {
+    pub fn to_index(&self, id: StateID) -> usize {
         self.tt.to_index(id)
     }
 
@@ -3034,12 +3038,12 @@ impl<T: AsRef<[u32]>> DFA<T> {
     /// This is useful when using a `Vec<T>` as an efficient map keyed by state
     /// to some other information (such as a remapped state ID).
     #[cfg(feature = "dfa-build")]
-    pub(crate) fn to_state_id(&self, index: usize) -> StateID {
+    pub fn to_state_id(&self, index: usize) -> StateID {
         self.tt.to_state_id(index)
     }
 
     /// Return the table of state IDs for this DFA's start states.
-    pub(crate) fn starts(&self) -> StartStateIter<'_> {
+    pub fn starts(&self) -> StartStateIter<'_> {
         self.st.iter()
     }
 
@@ -3856,7 +3860,7 @@ impl<T: AsMut<[u32]>> TransitionTable<T> {
 /// reason to generate a unique starting state for handling word boundaries.
 /// Similarly for start/end anchors.)
 #[derive(Clone)]
-pub(crate) struct StartTable<T> {
+pub struct StartTable<T> {
     /// The initial start state IDs.
     ///
     /// In practice, T is either `Vec<u32>` or `&[u32]`.
@@ -4678,18 +4682,18 @@ impl<T: AsRef<[u32]>> MatchStates<T> {
 /// A common set of flags for both dense and sparse DFAs. This primarily
 /// centralizes the serialization format of these flags at a bitset.
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct Flags {
+pub struct Flags {
     /// Whether the DFA can match the empty string. When this is false, all
     /// matches returned by this DFA are guaranteed to have non-zero length.
-    pub(crate) has_empty: bool,
+    pub has_empty: bool,
     /// Whether the DFA should only produce matches with spans that correspond
     /// to valid UTF-8. This also includes omitting any zero-width matches that
     /// split the UTF-8 encoding of a codepoint.
-    pub(crate) is_utf8: bool,
+    pub is_utf8: bool,
     /// Whether the DFA is always anchored or not, regardless of `Input`
     /// configuration. This is useful for avoiding a reverse scan even when
     /// executing unanchored searches.
-    pub(crate) is_always_start_anchored: bool,
+    pub is_always_start_anchored: bool,
 }
 
 impl Flags {
@@ -4710,7 +4714,7 @@ impl Flags {
 
     /// Deserializes the flags from the given slice. On success, this also
     /// returns the number of bytes read from the slice.
-    pub(crate) fn from_bytes(
+    pub fn from_bytes(
         slice: &[u8],
     ) -> Result<(Flags, usize), DeserializeError> {
         let (bits, nread) = wire::try_read_u32(slice, "flag bitset")?;
@@ -4725,7 +4729,7 @@ impl Flags {
     /// Writes these flags to the given byte slice. If the buffer is too small,
     /// then an error is returned. To determine how big the buffer must be,
     /// use `write_to_len`.
-    pub(crate) fn write_to<E: Endian>(
+    pub fn write_to<E: Endian>(
         &self,
         dst: &mut [u8],
     ) -> Result<usize, SerializeError> {
@@ -4750,7 +4754,7 @@ impl Flags {
 
     /// Returns the number of bytes the serialized form of these flags
     /// will use.
-    pub(crate) fn write_to_len(&self) -> usize {
+    pub fn write_to_len(&self) -> usize {
         size_of::<u32>()
     }
 }
@@ -4763,7 +4767,7 @@ impl Flags {
 ///
 /// `'a` corresponding to the lifetime of original DFA, `T` corresponds to
 /// the type of the transition table itself.
-pub(crate) struct StateIter<'a, T> {
+pub struct StateIter<'a, T> {
     tt: &'a TransitionTable<T>,
     it: iter::Enumerate<slice::Chunks<'a, StateID>>,
 }
@@ -4782,7 +4786,7 @@ impl<'a, T: AsRef<[u32]>> Iterator for StateIter<'a, T> {
 /// An immutable representation of a single DFA state.
 ///
 /// `'a` correspondings to the lifetime of a DFA's transition table.
-pub(crate) struct State<'a> {
+pub struct State<'a> {
     id: StateID,
     stride2: usize,
     transitions: &'a [StateID],
@@ -4796,7 +4800,7 @@ impl<'a> State<'a> {
     /// Each transition is represented by a tuple. The first element is
     /// the input byte for that transition and the second element is the
     /// transitions itself.
-    pub(crate) fn transitions(&self) -> StateTransitionIter<'_> {
+    pub fn transitions(&self) -> StateTransitionIter<'_> {
         StateTransitionIter {
             len: self.transitions.len(),
             it: self.transitions.iter().enumerate(),
@@ -4815,12 +4819,12 @@ impl<'a> State<'a> {
     /// representation (where you have an element for every non-dead
     /// transition), but in practice, checking if a byte is in a range is very
     /// cheap and using ranges tends to conserve quite a bit more space.
-    pub(crate) fn sparse_transitions(&self) -> StateSparseTransitionIter<'_> {
+    pub fn sparse_transitions(&self) -> StateSparseTransitionIter<'_> {
         StateSparseTransitionIter { dense: self.transitions(), cur: None }
     }
 
     /// Returns the identifier for this state.
-    pub(crate) fn id(&self) -> StateID {
+    pub fn id(&self) -> StateID {
         self.id
     }
 
@@ -4879,7 +4883,7 @@ impl<'a> fmt::Debug for State<'a> {
 /// Each transition is represented by a tuple. The first element is the input
 /// byte for that transition and the second element is the transition itself.
 #[derive(Debug)]
-pub(crate) struct StateTransitionIter<'a> {
+pub struct StateTransitionIter<'a> {
     len: usize,
     it: iter::Enumerate<slice::Iter<'a, StateID>>,
 }
@@ -4912,7 +4916,7 @@ impl<'a> Iterator for StateTransitionIter<'a> {
 /// type. That is, you'll never get a (byte, EOI) or a (EOI, byte). Only (byte,
 /// byte) and (EOI, EOI) values are yielded.
 #[derive(Debug)]
-pub(crate) struct StateSparseTransitionIter<'a> {
+pub struct StateSparseTransitionIter<'a> {
     dense: StateTransitionIter<'a>,
     cur: Option<(alphabet::Unit, alphabet::Unit, StateID)>,
 }
@@ -5011,35 +5015,37 @@ impl BuildError {
         &self.kind
     }
 
-    pub(crate) fn nfa(err: thompson::BuildError) -> BuildError {
+    /// missing doc
+    pub fn nfa(err: thompson::BuildError) -> BuildError {
         BuildError { kind: BuildErrorKind::NFA(err) }
     }
 
-    pub(crate) fn unsupported_dfa_word_boundary_unicode() -> BuildError {
+    /// missing docc
+    pub fn unsupported_dfa_word_boundary_unicode() -> BuildError {
         let msg = "cannot build DFAs for regexes with Unicode word \
                    boundaries; switch to ASCII word boundaries, or \
                    heuristically enable Unicode word boundaries or use a \
                    different regex engine";
         BuildError { kind: BuildErrorKind::Unsupported(msg) }
     }
-
-    pub(crate) fn too_many_states() -> BuildError {
+    /// docs or sum
+    pub fn too_many_states() -> BuildError {
         BuildError { kind: BuildErrorKind::TooManyStates }
     }
-
-    pub(crate) fn too_many_start_states() -> BuildError {
+    /// doc again
+    pub fn too_many_start_states() -> BuildError {
         BuildError { kind: BuildErrorKind::TooManyStartStates }
     }
-
-    pub(crate) fn too_many_match_pattern_ids() -> BuildError {
+    /// someting
+    pub fn too_many_match_pattern_ids() -> BuildError {
         BuildError { kind: BuildErrorKind::TooManyMatchPatternIDs }
     }
-
-    pub(crate) fn dfa_exceeded_size_limit(limit: usize) -> BuildError {
+    /// sum
+    pub fn dfa_exceeded_size_limit(limit: usize) -> BuildError {
         BuildError { kind: BuildErrorKind::DFAExceededSizeLimit { limit } }
     }
-
-    pub(crate) fn determinize_exceeded_size_limit(limit: usize) -> BuildError {
+    /// ding dong
+    pub fn determinize_exceeded_size_limit(limit: usize) -> BuildError {
         BuildError {
             kind: BuildErrorKind::DeterminizeExceededSizeLimit { limit },
         }

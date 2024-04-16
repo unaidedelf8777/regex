@@ -205,7 +205,7 @@ impl Config {
 /// DFA does it at search time, but it does enough work to cache the full
 /// result of the epsilon closure that the NFA engines tend to need to do.)
 #[derive(Clone)]
-pub(crate) struct StartByteMap {
+pub struct StartByteMap {
     map: [Start; 256],
 }
 
@@ -341,7 +341,7 @@ impl core::fmt::Debug for StartByteMap {
 /// determinization can be *quite* tricky and subtle. But the code is small
 /// and can be found at `crate::util::determinize::set_lookbehind_from_start`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum Start {
+pub enum Start {
     /// This occurs when the starting position is not any of the ones below.
     NonWordByte = 0,
     /// This occurs when the byte immediately preceding the start of the search

@@ -157,7 +157,7 @@ macro_rules! err {
 //     |----------------------------|------------------------
 //              special                   non-special*
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct Special {
+pub struct Special {
     /// The identifier of the last special state in a DFA. A state is special
     /// if and only if its identifier is less than or equal to `max`.
     pub(crate) max: StateID,

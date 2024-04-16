@@ -682,7 +682,7 @@ impl<'a> Iterator for ByteClassElementRanges<'a> {
 /// same equivalence class.)
 #[cfg(feature = "alloc")]
 #[derive(Clone, Debug)]
-pub(crate) struct ByteClassSet(ByteSet);
+pub struct ByteClassSet(ByteSet);
 
 #[cfg(feature = "alloc")]
 impl Default for ByteClassSet {
@@ -739,7 +739,7 @@ impl ByteClassSet {
 
 /// A simple set of bytes that is reasonably cheap to copy and allocation free.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub(crate) struct ByteSet {
+pub struct ByteSet {
     bits: BitSet,
 }
 
@@ -866,7 +866,8 @@ impl core::fmt::Debug for BitSet {
 }
 
 #[derive(Debug)]
-pub(crate) struct ByteSetIter<'a> {
+/// f
+pub struct ByteSetIter<'a> {
     set: &'a ByteSet,
     b: usize,
 }
@@ -887,7 +888,8 @@ impl<'a> Iterator for ByteSetIter<'a> {
 }
 
 #[derive(Debug)]
-pub(crate) struct ByteSetRangeIter<'a> {
+///
+pub struct ByteSetRangeIter<'a> {
     set: &'a ByteSet,
     b: usize,
 }

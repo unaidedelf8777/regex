@@ -852,7 +852,7 @@ pub(crate) fn padding_len(non_padding_len: usize) -> usize {
 ///
 /// This is similar to what byteorder provides, but we only need a very small
 /// subset.
-pub(crate) trait Endian {
+pub trait Endian {
     /// Writes a u16 to the given destination buffer in a particular
     /// endianness. If the destination buffer has a length smaller than 2, then
     /// this panics.
