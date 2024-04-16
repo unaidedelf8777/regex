@@ -1563,13 +1563,6 @@ impl DFA<&[u32]> {
         Config::new()
     }
 
-    pub fn get_transitions(&self) -> TransitionTable {
-        self.tt.clone()
-    }
-
-    pub fn get_starts(&self) -> StartTable {
-        self.st.clone()
-    }
 
 
     /// Create a new dense DFA builder with the default configuration.
@@ -1595,6 +1588,12 @@ impl<T: AsRef<[u32]>> DFA<T> {
             quitset: self.quitset,
             flags: self.flags,
         }
+    }
+
+
+
+    pub fn get_transitions(&self) -> TransitionTable<T> {
+        self.tt.clone()
     }
 
     /// Return an owned version of this sparse DFA. Specifically, the DFA
@@ -4307,7 +4306,7 @@ pub struct StartStateIter<'a> {
 impl<'a> Iterator for StartStateIter<'a> {
     type Item = (StateID, Anchored, Start);
 
-    pub fn next(&mut self) -> Option<(StateID, Anchored, Start)> {
+    fn next(&mut self) -> Option<(StateID, Anchored, Start)> {
         let i = self.i;
         let table = self.st.table();
         if i >= table.len() {
