@@ -1563,6 +1563,15 @@ impl DFA<&[u32]> {
         Config::new()
     }
 
+    pub fn get_transitions(&self) -> TransitionTable {
+        self.tt.clone()
+    }
+
+    pub fn get_starts(&self) -> StartTable {
+        self.st.clone()
+    }
+
+
     /// Create a new dense DFA builder with the default configuration.
     ///
     /// This is a convenience routine to avoid needing to import the
@@ -3282,7 +3291,7 @@ unsafe impl<T: AsRef<[u32]>> Automaton for DFA<T> {
 /// The transition table is the core part of the DFA in that it describes how
 /// to move from one state to another based on the input sequence observed.
 #[derive(Clone)]
-pub(crate) struct TransitionTable<T> {
+pub struct TransitionTable<T> {
     /// A contiguous region of memory representing the transition table in
     /// row-major order. The representation is dense. That is, every state
     /// has precisely the same number of transitions. The maximum number of
@@ -3359,7 +3368,7 @@ impl<'a> TransitionTable<&'a [u32]> {
     /// Callers that use this function must either pass on the safety invariant
     /// or guarantee that the bytes given contain a valid transition table.
     /// This guarantee is upheld by the bytes written by `write_to`.
-    unsafe fn from_bytes_unchecked(
+    unsafe pub fn from_bytes_unchecked(
         mut slice: &'a [u8],
     ) -> Result<(TransitionTable<&'a [u32]>, usize), DeserializeError> {
         let slice_start = slice.as_ptr().as_usize();
@@ -3429,7 +3438,7 @@ impl TransitionTable<Vec<u32>> {
     /// Create a minimal transition table with just two states: a dead state
     /// and a quit state. The alphabet length and stride of the transition
     /// table is determined by the given set of equivalence classes.
-    fn minimal(classes: ByteClasses) -> TransitionTable<Vec<u32>> {
+    pub fn minimal(classes: ByteClasses) -> TransitionTable<Vec<u32>> {
         let mut tt = TransitionTable {
             table: vec![],
             classes,
@@ -3444,7 +3453,7 @@ impl TransitionTable<Vec<u32>> {
     /// Set a transition in this table. Both the `from` and `to` states must
     /// already exist, otherwise this panics. `unit` should correspond to the
     /// transition out of `from` to set to `to`.
-    fn set(&mut self, from: StateID, unit: alphabet::Unit, to: StateID) {
+    pub fn set(&mut self, from: StateID, unit: alphabet::Unit, to: StateID) {
         assert!(self.is_valid(from), "invalid 'from' state");
         assert!(self.is_valid(to), "invalid 'to' state");
         self.table[from.as_usize() + self.classes.get_by_unit(unit)] =
@@ -3457,7 +3466,7 @@ impl TransitionTable<Vec<u32>> {
     ///
     /// If adding a state would exhaust the state identifier space, then this
     /// returns an error.
-    fn add_empty_state(&mut self) -> Result<StateID, BuildError> {
+    pub fn add_empty_state(&mut self) -> Result<StateID, BuildError> {
         // Normally, to get a fresh state identifier, we would just
         // take the index of the next state added to the transition
         // table. However, we actually perform an optimization here
@@ -3511,7 +3520,7 @@ impl TransitionTable<Vec<u32>> {
     /// updated appropriately.
     ///
     /// Both id1 and id2 must point to valid states, otherwise this panics.
-    fn swap(&mut self, id1: StateID, id2: StateID) {
+    pub fn swap(&mut self, id1: StateID, id2: StateID) {
         assert!(self.is_valid(id1), "invalid 'id1' state: {:?}", id1);
         assert!(self.is_valid(id2), "invalid 'id2' state: {:?}", id2);
         // We only need to swap the parts of the state that are used. So if the
@@ -3526,7 +3535,7 @@ impl TransitionTable<Vec<u32>> {
     /// given. This applies the given map function to every transition in the
     /// given state and changes the transition in place to the result of the
     /// map function for that transition.
-    fn remap(&mut self, id: StateID, map: impl Fn(StateID) -> StateID) {
+    pub fn remap(&mut self, id: StateID, map: impl Fn(StateID) -> StateID) {
         for byte in 0..self.alphabet_len() {
             let i = id.as_usize() + byte;
             let next = self.table()[i];
@@ -3539,7 +3548,7 @@ impl TransitionTable<Vec<u32>> {
     /// This routine does not do anything to check the correctness of this
     /// truncation. Callers must ensure that other states pointing to truncated
     /// states are updated appropriately.
-    fn truncate(&mut self, len: usize) {
+    pub fn truncate(&mut self, len: usize) {
         self.table.truncate(len << self.stride2);
     }
 }
@@ -3548,7 +3557,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     /// Writes a serialized form of this transition table to the buffer given.
     /// If the buffer is too small, then an error is returned. To determine
     /// how big the buffer must be, use `write_to_len`.
-    fn write_to<E: Endian>(
+    pub fn write_to<E: Endian>(
         &self,
         mut dst: &mut [u8],
     ) -> Result<usize, SerializeError> {
@@ -3582,7 +3591,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
 
     /// Returns the number of bytes the serialized form of this transition
     /// table will use.
-    fn write_to_len(&self) -> usize {
+    pub fn write_to_len(&self) -> usize {
         size_of::<u32>()   // state length
         + size_of::<u32>() // stride2
         + self.classes.write_to_len()
@@ -3593,7 +3602,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     ///
     /// That is, every state ID can be used to correctly index a state in this
     /// table.
-    fn validate(&self, dfa: &DFA<T>) -> Result<(), DeserializeError> {
+    pub fn validate(&self, dfa: &DFA<T>) -> Result<(), DeserializeError> {
         let sp = &dfa.special;
         for state in self.states() {
             // We check that the ID itself is well formed. That is, if it's
@@ -3632,7 +3641,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     }
 
     /// Converts this transition table to a borrowed value.
-    fn as_ref(&self) -> TransitionTable<&'_ [u32]> {
+    pub fn as_ref(&self) -> TransitionTable<&'_ [u32]> {
         TransitionTable {
             table: self.table.as_ref(),
             classes: self.classes.clone(),
@@ -3642,7 +3651,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
 
     /// Converts this transition table to an owned value.
     #[cfg(feature = "alloc")]
-    fn to_owned(&self) -> TransitionTable<alloc::vec::Vec<u32>> {
+    pub fn to_owned(&self) -> TransitionTable<alloc::vec::Vec<u32>> {
         TransitionTable {
             table: self.table.as_ref().to_vec(),
             classes: self.classes.clone(),
@@ -3652,7 +3661,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
 
     /// Return the state for the given ID. If the given ID is not valid, then
     /// this panics.
-    fn state(&self, id: StateID) -> State<'_> {
+    pub fn state(&self, id: StateID) -> State<'_> {
         assert!(self.is_valid(id));
 
         let i = id.as_usize();
@@ -3668,7 +3677,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     /// This iterator yields a tuple for each state. The first element of the
     /// tuple corresponds to a state's identifier, and the second element
     /// corresponds to the state itself (comprised of its transitions).
-    fn states(&self) -> StateIter<'_, T> {
+    pub fn states(&self) -> StateIter<'_, T> {
         StateIter {
             tt: self,
             it: self.table().chunks(self.stride()).enumerate(),
@@ -3683,7 +3692,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     ///
     /// If the given ID is not valid, then this may panic or produce an
     /// incorrect index.
-    fn to_index(&self, id: StateID) -> usize {
+    pub fn to_index(&self, id: StateID) -> usize {
         id.as_usize() >> self.stride2
     }
 
@@ -3695,7 +3704,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     ///
     /// If the given index is not in the specified range, then this may panic
     /// or produce an incorrect state ID.
-    fn to_state_id(&self, index: usize) -> StateID {
+    pub fn to_state_id(&self, index: usize) -> StateID {
         // CORRECTNESS: If the given index is not valid, then it is not
         // required for this to panic or return a valid state ID.
         StateID::new_unchecked(index << self.stride2)
@@ -3707,7 +3716,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     /// if the state ID given is the last state in this DFA, then the state ID
     /// returned is guaranteed to be invalid.
     #[cfg(feature = "dfa-build")]
-    fn next_state_id(&self, id: StateID) -> StateID {
+    pub fn next_state_id(&self, id: StateID) -> StateID {
         self.to_state_id(self.to_index(id).checked_add(1).unwrap())
     }
 
@@ -3715,12 +3724,12 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     ///
     /// If the dead ID given (which is zero), then this panics.
     #[cfg(feature = "dfa-build")]
-    fn prev_state_id(&self, id: StateID) -> StateID {
+    pub fn prev_state_id(&self, id: StateID) -> StateID {
         self.to_state_id(self.to_index(id).checked_sub(1).unwrap())
     }
 
     /// Returns the table as a slice of state IDs.
-    fn table(&self) -> &[StateID] {
+    pub fn table(&self) -> &[StateID] {
         wire::u32s_to_state_ids(self.table.as_ref())
     }
 
@@ -3730,14 +3739,14 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     /// states. In particular, the dead state always has ID 0 and is
     /// correspondingly always the first state. The dead state is never a match
     /// state.
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.table().len() >> self.stride2
     }
 
     /// Returns the total stride for every state in this DFA. This corresponds
     /// to the total number of transitions used by each state in this DFA's
     /// transition table.
-    fn stride(&self) -> usize {
+    pub fn stride(&self) -> usize {
         1 << self.stride2
     }
 
@@ -3745,7 +3754,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     /// transition table. This is always less than or equal to `self.stride()`.
     /// It is only equal when the alphabet length is a power of 2. Otherwise,
     /// it is always strictly less.
-    fn alphabet_len(&self) -> usize {
+    pub fn alphabet_len(&self) -> usize {
         self.classes.alphabet_len()
     }
 
@@ -3753,7 +3762,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     /// transition table. Validity in this context means that the given ID can
     /// be used as a valid offset with `self.stride()` to index this transition
     /// table.
-    fn is_valid(&self, id: StateID) -> bool {
+    pub fn is_valid(&self, id: StateID) -> bool {
         let id = id.as_usize();
         id < self.table().len() && id % self.stride() == 0
     }
@@ -3761,7 +3770,7 @@ impl<T: AsRef<[u32]>> TransitionTable<T> {
     /// Return the memory usage, in bytes, of this transition table.
     ///
     /// This does not include the size of a `TransitionTable` value itself.
-    fn memory_usage(&self) -> usize {
+    pfn memory_usage(&self) -> usize {
         self.table().len() * StateID::SIZE
     }
 }
@@ -3848,7 +3857,7 @@ impl<T: AsMut<[u32]>> TransitionTable<T> {
 /// reason to generate a unique starting state for handling word boundaries.
 /// Similarly for start/end anchors.)
 #[derive(Clone)]
-pub(crate) struct StartTable<T> {
+pub struct StartTable<T> {
     /// The initial start state IDs.
     ///
     /// In practice, T is either `Vec<u32>` or `&[u32]`.
@@ -3899,7 +3908,7 @@ impl StartTable<Vec<u32>> {
     /// returns an error. In practice, this is unlikely to be able to occur,
     /// since it's likely that allocation would have failed long before it got
     /// to this point.
-    fn dead(
+    pub fn dead(
         kind: StartKind,
         lookm: &LookMatcher,
         pattern_len: Option<usize>,
@@ -3961,7 +3970,7 @@ impl<'a> StartTable<&'a [u32]> {
     /// Callers that use this function must either pass on the safety invariant
     /// or guarantee that the bytes given contain valid starting state IDs.
     /// This guarantee is upheld by the bytes written by `write_to`.
-    unsafe fn from_bytes_unchecked(
+    unsafe pub fn from_bytes_unchecked(
         mut slice: &'a [u8],
     ) -> Result<(StartTable<&'a [u32]>, usize), DeserializeError> {
         let slice_start = slice.as_ptr().as_usize();
@@ -4069,7 +4078,7 @@ impl<T: AsRef<[u32]>> StartTable<T> {
     /// Writes a serialized form of this start table to the buffer given. If
     /// the buffer is too small, then an error is returned. To determine how
     /// big the buffer must be, use `write_to_len`.
-    fn write_to<E: Endian>(
+    pub fn write_to<E: Endian>(
         &self,
         mut dst: &mut [u8],
     ) -> Result<usize, SerializeError> {
@@ -4121,7 +4130,7 @@ impl<T: AsRef<[u32]>> StartTable<T> {
 
     /// Returns the number of bytes the serialized form of this start ID table
     /// will use.
-    fn write_to_len(&self) -> usize {
+    pub fn write_to_len(&self) -> usize {
         self.kind.write_to_len()
         + self.start_map.write_to_len()
         + size_of::<u32>() // stride
@@ -4135,7 +4144,7 @@ impl<T: AsRef<[u32]>> StartTable<T> {
     /// it against the given transition table (which must be for the same DFA).
     ///
     /// That is, every state ID can be used to correctly index a state.
-    fn validate(&self, dfa: &DFA<T>) -> Result<(), DeserializeError> {
+    pub fn validate(&self, dfa: &DFA<T>) -> Result<(), DeserializeError> {
         let tt = &dfa.tt;
         if !self.universal_start_unanchored.map_or(true, |s| tt.is_valid(s)) {
             return Err(DeserializeError::generic(
@@ -4158,7 +4167,7 @@ impl<T: AsRef<[u32]>> StartTable<T> {
     }
 
     /// Converts this start list to a borrowed value.
-    fn as_ref(&self) -> StartTable<&'_ [u32]> {
+    pub fn as_ref(&self) -> StartTable<&'_ [u32]> {
         StartTable {
             table: self.table.as_ref(),
             kind: self.kind,
@@ -4172,7 +4181,7 @@ impl<T: AsRef<[u32]>> StartTable<T> {
 
     /// Converts this start list to an owned value.
     #[cfg(feature = "alloc")]
-    fn to_owned(&self) -> StartTable<alloc::vec::Vec<u32>> {
+    pub fn to_owned(&self) -> StartTable<alloc::vec::Vec<u32>> {
         StartTable {
             table: self.table.as_ref().to_vec(),
             kind: self.kind,
@@ -4191,7 +4200,7 @@ impl<T: AsRef<[u32]>> StartTable<T> {
     /// pattern search with an invalid pattern ID or on a DFA that was not
     /// built with start states for each pattern.
     #[cfg_attr(feature = "perf-inline", inline(always))]
-    fn start(
+    pub fn start(
         &self,
         anchored: Anchored,
         start: Start,
@@ -4232,19 +4241,19 @@ impl<T: AsRef<[u32]>> StartTable<T> {
     ///
     /// Each item is a triple of: start state ID, the start state type and the
     /// pattern ID (if any).
-    fn iter(&self) -> StartStateIter<'_> {
+    pub fn iter(&self) -> StartStateIter<'_> {
         StartStateIter { st: self.as_ref(), i: 0 }
     }
 
     /// Returns the table as a slice of state IDs.
-    fn table(&self) -> &[StateID] {
+    pub fn table(&self) -> &[StateID] {
         wire::u32s_to_state_ids(self.table.as_ref())
     }
 
     /// Return the memory usage, in bytes, of this start list.
     ///
     /// This does not include the size of a `StartList` value itself.
-    fn memory_usage(&self) -> usize {
+    pub fn memory_usage(&self) -> usize {
         self.table().len() * StateID::SIZE
     }
 }
@@ -4290,7 +4299,7 @@ impl<T: AsMut<[u32]>> StartTable<T> {
 /// contain it. Start states with an anchored mode containing a pattern ID will
 /// only occur when the DFA was compiled with start states for each pattern
 /// (which is disabled by default).
-pub(crate) struct StartStateIter<'a> {
+pub struct StartStateIter<'a> {
     st: StartTable<&'a [u32]>,
     i: usize,
 }
@@ -4298,7 +4307,7 @@ pub(crate) struct StartStateIter<'a> {
 impl<'a> Iterator for StartStateIter<'a> {
     type Item = (StateID, Anchored, Start);
 
-    fn next(&mut self) -> Option<(StateID, Anchored, Start)> {
+    pub fn next(&mut self) -> Option<(StateID, Anchored, Start)> {
         let i = self.i;
         let table = self.st.table();
         if i >= table.len() {
