@@ -1592,12 +1592,12 @@ impl<T: AsRef<[u32]>> DFA<T> {
 
 
     /// documentation or sum
-    pub fn get_transitions(&self) -> TransitionTable<T> 
+    pub fn get_transitions(&self) -> &TransitionTable<T> 
     where 
         T: Clone,
     {
         
-        self.tt.clone()
+        self.tt.as_ref();
     }
 
     /// Return an owned version of this sparse DFA. Specifically, the DFA
