@@ -1572,8 +1572,20 @@ impl<T: AsRef<[u32]>> DFA<T> {
     }
 
     /// get the final states of the DFA ( match states )
-    pub fn get_finals(&self, id: StateID) -> usize {
-        self.match_state_index(id)
+    pub fn get_finals(&self) -> Vec<StateID> {
+        // Assuming you can create a StateID from a usize with StateID::new(usize)
+        // and that self.special.min_match and self.special.max_match are accessible and valid
+
+        // Check if the range is valid
+        if self.special.min_match.as_usize() <= self.special.max_match.as_usize() {
+            // Create a vector of StateIDs from min_match to max_match
+            (self.special.min_match.as_usize()..=self.special.max_match.as_usize())
+                .map(StateID::must) // Convert each usize back to StateID using the new method
+                .collect::<Vec<StateID>>()
+        } else {
+            // Return an empty vector if the range is invalid
+            Vec::new()
+        }
     }
 
     /// Return an owned version of this sparse DFA. Specifically, the DFA
