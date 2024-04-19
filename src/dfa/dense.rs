@@ -1571,6 +1571,10 @@ impl<T: AsRef<[u32]>> DFA<T> {
         return self.tt.as_ref();
     }
 
+    pub fn get_special_states_max(&self) -> StateID {
+        return self.special.max;
+    }
+
     /// get the final states of the DFA ( match states )
     pub fn get_finals(&self) -> Vec<StateID> {
         // Assuming you can create a StateID from a usize with StateID::new(usize)
