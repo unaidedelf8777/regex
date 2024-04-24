@@ -1578,6 +1578,10 @@ impl<T: AsRef<[u32]>> DFA<T> {
     pub fn get_accel_states_range(&self) -> (StateID, StateID) {
         return (self.special.min_accel, self.special.max_accel);
     }
+    ///
+    pub fn get_match_states_range(&self) -> (StateID, StateID) {
+        return (self.special.min_match, self.special.max_match);
+    }
 
     /// get the final states of the DFA ( match states )
     pub fn get_finals(&self) -> Vec<StateID> {
