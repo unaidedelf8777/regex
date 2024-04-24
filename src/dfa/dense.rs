@@ -1570,9 +1570,13 @@ impl<T: AsRef<[u32]>> DFA<T> {
     {
         return self.tt.as_ref();
     }
-
+    ///
     pub fn get_special_states_max(&self) -> StateID {
         return self.special.max;
+    }
+    ///
+    pub fn get_accel_states_range(&self) -> (StateID, StateID) {
+        return (self.special.min_accel, self.special.max_accel);
     }
 
     /// get the final states of the DFA ( match states )
