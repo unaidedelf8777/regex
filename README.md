@@ -1,3 +1,4 @@
+> ## This is the regex-automata crate from [the rust regex crate](https://github.com/rust-lang/regex/actions), modified to expose a bit more.
 regex-automata
 ==============
 This crate exposes a variety of regex engines used by the `regex` crate.
